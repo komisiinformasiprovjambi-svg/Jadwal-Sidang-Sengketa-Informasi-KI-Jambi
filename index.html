@@ -2415,13 +2415,6 @@ function updateStats() {
   /* Unik perkara berdasarkan nomor register */
   const uniqueRegisters = [...new Set(sidangData.map(d => d.register).filter(Boolean))];
 
-  /* Sidang hari ini */
-  const today = todayDate();
-  const todayCount = sidangData.filter(d => {
-    const tgl = parseTanggal(d.tanggal);
-    return tgl && tgl.getTime() === today.getTime();
-  }).length;
-
   /* Perkara aktif (status belum selesai/putusan) — per register unik */
   const perkaraDone = new Set();
   const perkaraAktif = new Set();
@@ -2448,6 +2441,7 @@ function updateStats() {
   const cardsEl = document.getElementById('statTodayCards');
 
   /* Data sidang hari ini */
+  const today = todayDate();
   const todayItems = sidangData.filter(d => {
     const tgl = parseTanggal(d.tanggal);
     return tgl && tgl.getTime() === today.getTime();
