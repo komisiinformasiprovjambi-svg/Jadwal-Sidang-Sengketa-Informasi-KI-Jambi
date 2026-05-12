@@ -1108,40 +1108,88 @@ window.deleteUser = async function(uid, nama) {
   }
 };
 
+let _allJadwal = []; // cache semua data untuk filter
+
 async function loadAdminJadwal() {
   const cont = document.getElementById('adminContent');
-  cont.innerHTML = `<div class="alert" id="adminAlert"></div><div class="table-wrap" id="jadwalTable"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>`;
+  cont.innerHTML = `
+    <div class="alert" id="adminAlert"></div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <div class="form-group-dash" style="margin:0;flex:1;min-width:160px">
+        <input type="date" id="filterTanggal" placeholder="Filter tanggal..." style="padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%">
+      </div>
+      <button onclick="applyFilterTanggal()" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Filter</button>
+      <button onclick="resetFilterTanggal()" style="padding:8px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-secondary)">Reset</button>
+      <button onclick="hapusSemuaTanggalFilter()" style="padding:8px 14px;background:var(--danger-light);color:var(--danger);border:1px solid #fecaca;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑️ Hapus Semua Tanggal Ini</button>
+    </div>
+    <div class="table-wrap" id="jadwalTable"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>`;
   try {
     const snap = await getDocs(collection(db, 'jadwal_sidang'));
-    const jadwal = [];
-    snap.forEach(d => jadwal.push({ id: d.id, ...d.data() }));
-    jadwal.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
-    if (jadwal.length === 0) {
-      document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal di Firestore.</p></div>`;
-      return;
-    }
-    document.getElementById('jadwalTable').innerHTML = `
-      <table>
-        <thead><tr><th>Register</th><th>Tanggal</th><th>Agenda</th><th>Pemohon</th><th>Termohon</th><th>Majelis</th><th>Aksi</th></tr></thead>
-        <tbody>
-          ${jadwal.map(j => `
-            <tr>
-              <td><strong>${j.register}</strong></td>
-              <td>${j.tanggal || '-'} ${j.jam || ''}</td>
-              <td>${j.agenda || '-'}</td>
-              <td>${j.pemohon || '-'}</td>
-              <td>${j.termohon || '-'}</td>
-              <td style="font-size:12px;color:var(--text-secondary);max-width:180px">${j.majelis ? j.majelis.substring(0,60) + (j.majelis.length > 60 ? '...' : '') : '<em style="color:var(--text-muted)">–</em>'}</td>
-              <td><button class="btn-edit" onclick="editJadwal('${j.id}')">✏️ Edit</button><button class="btn-del" onclick="deleteJadwal('${j.id}')">Hapus</button></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
+    _allJadwal = [];
+    snap.forEach(d => _allJadwal.push({ id: d.id, ...d.data() }));
+    _allJadwal.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
+    renderJadwalTable(_allJadwal);
   } catch(e) {
     document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Gagal memuat.</p></div>`;
   }
 }
+
+function renderJadwalTable(jadwal) {
+  if (jadwal.length === 0) {
+    document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Tidak ada data untuk filter ini.</p></div>`;
+    return;
+  }
+  document.getElementById('jadwalTable').innerHTML = `
+    <table>
+      <thead><tr><th>Register</th><th>Tanggal</th><th>Agenda</th><th>Pemohon</th><th>Termohon</th><th>Majelis</th><th>Aksi</th></tr></thead>
+      <tbody>
+        ${jadwal.map(j => `
+          <tr>
+            <td><strong>${j.register || '-'}</strong></td>
+            <td>${j.tanggal || '-'} ${j.jam || ''}</td>
+            <td>${j.agenda || '-'}</td>
+            <td>${j.pemohon || '-'}</td>
+            <td>${j.termohon || '-'}</td>
+            <td style="font-size:12px;color:var(--text-secondary);max-width:180px">${j.majelis ? j.majelis.substring(0,60) + (j.majelis.length > 60 ? '...' : '') : '<em style="color:var(--text-muted)">–</em>'}</td>
+            <td><button class="btn-edit" onclick="editJadwal('${j.id}')">✏️ Edit</button><button class="btn-del" onclick="deleteJadwal('${j.id}')">Hapus</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+window.applyFilterTanggal = function() {
+  const val = document.getElementById('filterTanggal').value;
+  if (!val) { showAdminAlert('error', 'Pilih tanggal dulu untuk difilter.'); return; }
+  const filtered = _allJadwal.filter(j => j.tanggal === val);
+  renderJadwalTable(filtered);
+  if (filtered.length === 0) {
+    showAdminAlert('success', `Tidak ada data untuk tanggal ${val}.`);
+  } else {
+    showAdminAlert('success', `Menampilkan ${filtered.length} data untuk tanggal ${val}. Kamu bisa hapus satu-satu atau pakai tombol "Hapus Semua Tanggal Ini".`);
+  }
+};
+
+window.resetFilterTanggal = function() {
+  document.getElementById('filterTanggal').value = '';
+  renderJadwalTable(_allJadwal);
+};
+
+window.hapusSemuaTanggalFilter = async function() {
+  const val = document.getElementById('filterTanggal').value;
+  if (!val) { showAdminAlert('error', 'Pilih tanggal dulu sebelum hapus massal.'); return; }
+  const toDelete = _allJadwal.filter(j => j.tanggal === val);
+  if (toDelete.length === 0) { showAdminAlert('error', 'Tidak ada data untuk tanggal tersebut.'); return; }
+  if (!confirm(`Hapus SEMUA ${toDelete.length} jadwal pada tanggal ${val}? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try {
+    await Promise.all(toDelete.map(j => deleteDoc(doc(db, 'jadwal_sidang', j.id))));
+    showAdminAlert('success', `✓ ${toDelete.length} jadwal pada tanggal ${val} berhasil dihapus.`);
+    await loadAdminJadwal();
+  } catch(e) {
+    showAdminAlert('error', 'Gagal hapus: ' + e.message);
+  }
+};
 
 window.deleteJadwal = async function(id) {
   if (!confirm('Hapus jadwal ini?')) return;
