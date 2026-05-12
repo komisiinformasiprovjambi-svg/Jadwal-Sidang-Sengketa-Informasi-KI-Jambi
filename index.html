@@ -1938,7 +1938,7 @@ async function fetchFirestoreData() {
   const snap = await getDocs(
     query(collection(db, 'jadwal_sidang'), orderBy('tanggal', 'asc'))
   );
-  return snap.docs.map(d => {
+  const allRows = snap.docs.map(d => {
     const data = d.data();
     return {
       id           : d.id,
@@ -1956,6 +1956,15 @@ async function fetchFirestoreData() {
       link_putusan : (data.link_putusan || '').trim(),
     };
   }).filter(d => d.register); /* buang dokumen tanpa register */
+
+  /* ── Deduplikasi: buang baris duplikat berdasarkan register+tanggal+agenda ── */
+  const seen = new Set();
+  return allRows.filter(d => {
+    const key = `${d.register}|${d.tanggal}|${d.agenda}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /* ════════════════════════════════════════════════════════
@@ -2710,6 +2719,7 @@ document.head.appendChild(styleEl);
 window.filterCards      = filterCards;
 window.setFilter        = setFilter;
 window.togglePast       = togglePast;
+window.toggleGroup      = toggleGroup;
 window.openModal        = openModal;
 window.closeModal       = closeModal;
 window.closeModalDirect = closeModalDirect;
