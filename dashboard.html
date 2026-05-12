@@ -314,7 +314,10 @@
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="••••••••">
+        <div style="position:relative">
+          <input type="password" id="loginPassword" placeholder="••••••••" style="width:100%;padding-right:44px">
+          <button type="button" onclick="togglePassword()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:0" id="eyeBtn">👁️</button>
+        </div>
       </div>
       <button class="btn-login" id="btnLogin" onclick="doLogin()">Masuk</button>
       <div class="login-error" id="loginError"></div>
@@ -473,6 +476,18 @@ window.doLogout = async function() {
 document.getElementById('loginPassword').addEventListener('keydown', e => {
   if (e.key === 'Enter') window.doLogin();
 });
+
+window.togglePassword = function() {
+  const input = document.getElementById('loginPassword');
+  const btn = document.getElementById('eyeBtn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁️';
+  }
+};
 
 // ── Dashboard Router ──
 async function renderDashboard() {
