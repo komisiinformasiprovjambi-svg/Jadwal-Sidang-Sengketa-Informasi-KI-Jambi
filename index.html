@@ -1657,8 +1657,9 @@
 
 <!-- STICKY NAV BAR -->
 <div class="nav-bar">
-  <div class="nav-bar-inner">
+  <div class="nav-bar-inner" style="justify-content:space-between">
     <span class="nav-label"><strong>Sistem Informasi Jadwal Persidangan</strong> &nbsp;·&nbsp; Komisi Informasi Provinsi Jambi</span>
+    <a href="dashboard.html" style="font-size:12px;font-weight:600;color:var(--gold);text-decoration:none;padding:5px 14px;border:1px solid rgba(192,154,58,0.4);border-radius:20px;transition:all 0.2s;white-space:nowrap" onmouseover="this.style.background='rgba(192,154,58,0.15)'" onmouseout="this.style.background='transparent'">🔐 Portal Internal</a>
   </div>
 </div>
 
@@ -1884,6 +1885,13 @@
         <div class="modal-section-title">Catatan Sidang</div>
         <div class="catatan-box">
           <p id="m-catatan">–</p>
+        </div>
+      </div>
+
+      <div class="modal-section" id="m-catatan-panitera-section" style="display:none">
+        <div class="modal-section-title">📝 Catatan Panitera</div>
+        <div class="catatan-box" style="border-left:3px solid var(--accent);padding-left:14px">
+          <p id="m-catatan-panitera" style="font-style:normal;color:var(--text-primary)">–</p>
         </div>
       </div>
 
@@ -2386,10 +2394,35 @@ document.addEventListener('keydown', e => {
 
 /* ── Handle tombol Back di HP: tutup modal dulu, jangan keluar situs ── */
 function openModal(d) {
-  /* Override openModal untuk tambah history entry */
   _fillModal(d);
   document.getElementById('modalOverlay').classList.add('open');
   history.pushState({ modal: true }, '');
+
+  /* Ambil catatan panitera dari Firebase */
+  const section = document.getElementById('m-catatan-panitera-section');
+  const elCatPanitera = document.getElementById('m-catatan-panitera');
+  section.style.display = 'none';
+  elCatPanitera.textContent = '–';
+
+  if (d.register) {
+    import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js").then(({ initializeApp, getApps }) => {
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js").then(({ getFirestore, doc, getDoc }) => {
+        const apps = getApps();
+        const fbApp = apps.length ? apps[0] : initializeApp({
+          apiKey: "AIzaSyAupEIJ7vyFPKDF8NzNSnOtWm32XUjucdE",
+          authDomain: "informasi-sidang-ki-jambi.firebaseapp.com",
+          projectId: "informasi-sidang-ki-jambi"
+        });
+        const db = getFirestore(fbApp);
+        getDoc(doc(db, 'catatan_panitera', d.register)).then(snap => {
+          if (snap.exists() && snap.data().isi) {
+            elCatPanitera.textContent = snap.data().isi;
+            section.style.display = 'block';
+          }
+        }).catch(() => {});
+      });
+    });
+  }
 }
 
 window.addEventListener('popstate', e => {
